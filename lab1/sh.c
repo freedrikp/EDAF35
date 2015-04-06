@@ -180,7 +180,6 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 					found_cmd = true;			
 					break;
 				}
-				//printf("%s\n",cmd_buffer);
 				list = list->succ;
 			}
 			if(found_cmd)
@@ -194,6 +193,10 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 					dup2(output_fd,STDOUT_FILENO);
 				}
 				execv(cmd_buffer,argv);
+				if(doing_pipe)
+				{
+					close(input_fd);
+				}
 			}
 			else
 			{
@@ -288,7 +291,11 @@ void parse_line(void)
 
 		case PIPE:
 			doing_pipe = true;
-
+			if(pipe(pipe_fd)==-1)
+			{
+				error("could not create pipe");
+			}
+			output_fd = pipe_fd[1];
 			/*FALLTHROUGH*/
 
 		case AMPERSAND:
@@ -305,11 +312,19 @@ void parse_line(void)
 			argv[argc] = NULL;
 
 			run_program(argv, argc, foreground, doing_pipe);
-
-			input_fd	= STDIN_FILENO;
-			output_fd	= STDOUT_FILENO;
+			
+			if(doing_pipe)
+			{
+				input_fd = pipe_fd[0];
+				close(pipe_fd[1]);
+			}
+			else
+			{
+				input_fd	= STDIN_FILENO;
+				output_fd	= STDOUT_FILENO;
+			}
 			argc		= 0;
-
+			
 			if (type == NEWLINE)
 				return;
 
