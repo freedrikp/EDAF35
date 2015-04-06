@@ -161,6 +161,60 @@ void error(char *fmt, ...)
 /* run_program: fork and exec a program. */
 void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 {
+	pid_t childPID;
+	int child_status;
+	childPID = fork();
+	if(childPID>=0) /*fork was successfull*/
+	{
+		if(childPID == 0) //child process
+		{
+			unsigned length_of_list = length(path_dir_list);
+			list_t* list = path_dir_list;
+			char cmd_buffer[MAXBUF];
+			bool found_cmd = false;
+			while(length_of_list--)
+			{
+				snprintf(cmd_buffer,MAXBUF,"%s/%s",list->data,argv[0]);
+				if(access(cmd_buffer,F_OK)==0)
+				{	
+					found_cmd = true;			
+					break;
+				}
+				//printf("%s\n",cmd_buffer);
+				list = list->succ;
+			}
+			if(found_cmd)
+			{
+				if(input_fd!=STDIN_FILENO)
+				{
+					dup2(input_fd,STDIN_FILENO);
+				}
+				if(output_fd!=STDOUT_FILENO)
+				{
+					dup2(output_fd,STDOUT_FILENO);
+				}
+				execv(cmd_buffer,argv);
+			}
+			else
+			{
+			} 
+		}
+		else //Parent process
+		{
+			if(foreground)
+			{
+				pid_t tpid;
+				do
+				{
+					tpid = wait(&child_status);
+				}while(tpid!= childPID);
+			}
+		}
+	}
+	else //fork failed
+	{
+		error("Fork Failed");
+	}
 	/* you need to fork, search for the command in argv[0],
          * setup stdin and stdout of the child process, execv it.
          * the parent should sometimes wait and sometimes not wait for
@@ -187,8 +241,8 @@ void parse_line(void)
 	bool		foreground;
 	bool		doing_pipe;
 
-	input_fd	= 0;
-	output_fd	= 0;
+	input_fd	= STDIN_FILENO;
+	output_fd	= STDOUT_FILENO;
 	argc		= 0;
 
 	for (;;) {
@@ -252,8 +306,8 @@ void parse_line(void)
 
 			run_program(argv, argc, foreground, doing_pipe);
 
-			input_fd	= 0;
-			output_fd	= 0;
+			input_fd	= STDIN_FILENO;
+			output_fd	= STDOUT_FILENO;
 			argc		= 0;
 
 			if (type == NEWLINE)
