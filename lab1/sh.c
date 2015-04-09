@@ -204,7 +204,7 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 		}
 		else //Parent process
 		{
-			if(foreground)
+			if(foreground && !doing_pipe)
 			{
 				pid_t tpid;
 				do
@@ -321,8 +321,8 @@ void parse_line(void)
 			else
 			{
 				input_fd	= STDIN_FILENO;
-				output_fd	= STDOUT_FILENO;
 			}
+				output_fd	= STDOUT_FILENO;
 			argc		= 0;
 			
 			if (type == NEWLINE)
