@@ -1,8 +1,6 @@
 #include <stdio.h>
-#include <stdlib.h>
-
 //Segmantation fault program
-int main(int argc, char* argv[])
+int main()
 {
 	char* a = "foo";
 	a[0] = 'h';

@@ -211,6 +211,16 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 				{
 					tpid = wait(&child_status);
 				}while(tpid!= childPID);
+			// lab 2
+				if(WIFEXITED(child_status))
+				{
+					printf("child exited correctly\n");
+				}
+				else
+				{
+					printf("child exited uncorrectly\n");
+				}
+				printf("child status: %d\n",child_status);
 			}
 		}
 	}
