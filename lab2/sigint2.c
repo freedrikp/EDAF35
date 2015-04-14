@@ -12,10 +12,13 @@ void sig_usr_handler(int sig)
 
 void sig_int_handler(int sig)
 {
-	struct sigaction new_action;
-	sigemptyset(&new_action.sa_mask);
-	new_action.sa_handler = &sig_usr_handler;
-	sigaction(SIGUSR2,&new_action,NULL);
+	struct sigaction new_action2;
+	sigemptyset(&new_action2.sa_mask);
+	new_action2.sa_handler = &sig_usr_handler;
+	sigaction(SIGUSR2,&new_action2,NULL);
+	struct sigaction usr_action;
+	usr_action.sa_handler = SIG_IGN;
+	sigaction(SIGUSR1,&usr_action,NULL);
 	while(1);
 
 }
@@ -30,7 +33,7 @@ int main(int argc, char* argv[])
 	//signal(SIGINT,sig_int_handler);
 	struct sigaction new_action;
 	sigemptyset(&new_action.sa_mask);
-	sigaddset(&new_action.sa_mask,SIGUSR1);
+	//sigaddset(&new_action.sa_mask,SIGUSR1);
 	new_action.sa_handler = &sig_int_handler;
 	sigaction(SIGINT,&new_action,NULL);
 	while(1);

@@ -206,12 +206,23 @@ void run_program(char** argv, int argc, bool foreground, bool doing_pipe)
 		{
 			if(foreground && !doing_pipe)
 			{
-				pid_t tpid;
+			/*	pid_t tpid;
 				do
 				{
 					tpid = wait(&child_status);
 				}while(tpid!= childPID);
 			// lab 2
+				if(WIFEXITED(child_status))
+				{
+					printf("child exited correctly\n");
+				}
+				else
+				{
+					printf("child exited uncorrectly\n");
+				}
+				printf("child status: %d\n",child_status);
+*/
+				waitpid(childPID, &child_status, 0);
 				if(WIFEXITED(child_status))
 				{
 					printf("child exited correctly\n");
