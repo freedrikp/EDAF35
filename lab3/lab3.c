@@ -203,6 +203,7 @@ static void pagefault(unsigned virt_page)
 		read_page(page,new_page->page);
 	}
 		new_page->inmemory = 1;
+		new_page->page = page;
 		coremap[page].owner = new_page;
 
 }
