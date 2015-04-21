@@ -16,6 +16,8 @@
 #define SWAP_SIZE	(SWAP_PAGES * PAGESIZE)
 #undef DEBUG
 
+#define DEBUG (1)
+
 #define ADD	(0)
 #define ADDI	(1)
 #define SUB	(2)
@@ -165,24 +167,24 @@ static unsigned take_phys_page()
 
 	page = (*replace)();
 
-	coremap_entry_t entry = coremap[page];
-
-	if (entry.owner->ondisk){
-		if (entry.owner->modified){
-			entry.owner->modified = 0;
-			write_page(page,entry.page);
+	coremap_entry_t* entry = &coremap[page];
+	if(entry->owner != NULL){
+		if (entry->owner->ondisk){
+			if (entry->owner->modified){
+				entry->owner->modified = 0;
+				write_page(page,entry->page);
+			}
+				entry->owner->inmemory=0;
+				entry->owner->page = entry->page;
+		}else{
+			entry->owner->inmemory=0;
+			entry->owner->ondisk = 1;
+			entry->owner->modified = 0;
+			unsigned swap_page = new_swap_page();
+			entry->owner->page = swap_page;
+			write_page(page,swap_page);
 		}
-			entry.owner->inmemory=0;
-			entry.owner->page = entry.page;
-	}else{
-		entry.owner->inmemory=0;
-		entry.owner->ondisk = 1;
-		entry.owner->modified = 0;
-		unsigned swap_page = new_swap_page();
-		entry.owner->page = swap_page;
-		write_page(page,swap_page);
 	}
-
 	return page;
 }
 
@@ -194,7 +196,14 @@ static void pagefault(unsigned virt_page)
 
 	page = take_phys_page();
 
-	page_table_entry_t new_page = page_table[virt_page];
+	page_table_entry_t* new_page = &page_table[virt_page];
+
+	if(new_page->ondisk){
+		coremap[page].page = new_page->page;
+		read_page(page,new_page->page);
+	}
+		new_page->inmemory = 1;
+		coremap[page].owner = new_page;
 
 }
 
@@ -306,7 +315,7 @@ int run(int argc, char** argv)
 	if (argc > 1)
 		file = argv[1];
 	else
-		file = "a.s";
+		file = "fac.s";
 
 	read_program(file, memory, &ninstr);
 
