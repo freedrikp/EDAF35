@@ -147,6 +147,24 @@ static unsigned fifo_page_replace()
 
 	page = (page + 1) % RAM_PAGES;
 
+	coremap_entry_t* entry = &coremap[page];
+	if(entry->owner != NULL){
+		if (entry->owner->ondisk){
+			if (entry->owner->modified){
+				entry->owner->modified = 0;
+				write_page(page,entry->page);
+			}
+				entry->owner->inmemory=0;
+				entry->owner->page = entry->page;
+		}else{
+			entry->owner->inmemory=0;
+			entry->owner->ondisk = 1;
+			entry->owner->modified = 0;
+			unsigned swap_page = new_swap_page();
+			entry->owner->page = swap_page;
+			write_page(page,swap_page);
+		}
+	}
 	assert(page < RAM_PAGES);
 
 	return page;
@@ -167,7 +185,7 @@ static unsigned take_phys_page()
 
 	page = (*replace)();
 
-	coremap_entry_t* entry = &coremap[page];
+	/*coremap_entry_t* entry = &coremap[page];
 	if(entry->owner != NULL){
 		if (entry->owner->ondisk){
 			if (entry->owner->modified){
@@ -184,7 +202,7 @@ static unsigned take_phys_page()
 			entry->owner->page = swap_page;
 			write_page(page,swap_page);
 		}
-	}
+	}*/
 	return page;
 }
 
