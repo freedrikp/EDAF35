@@ -81,7 +81,7 @@ static coremap_entry_t		coremap[RAM_PAGES];	/* OS data structure. */
 static unsigned			memory[RAM_SIZE];	/* Hardware: RAM. */
 static unsigned			swap[SWAP_SIZE];	/* Hardware: disk. */
 static unsigned			(*replace)(void);	/* Page repl. alg. */
-
+static unsigned long long			counter = 0;
 unsigned make_instr(unsigned opcode, unsigned dest, unsigned s1, unsigned s2)
 {
 	return (opcode << 26) | (dest << 21) | (s1 << 16) | (s2 & 0xffff);
@@ -130,6 +130,7 @@ static void write_page(unsigned phys_page, unsigned swap_page)
 	memcpy(&swap[swap_page * PAGESIZE],
 		&memory[phys_page * PAGESIZE],
 		PAGESIZE * sizeof(unsigned));
+	counter++;
 }
 
 static unsigned new_swap_page()
@@ -146,44 +147,6 @@ static unsigned fifo_page_replace()
   static int	page;
 
 	page = (page + 1) % RAM_PAGES;
-
-	coremap_entry_t* entry = &coremap[page];
-	if(entry->owner != NULL){
-		if (entry->owner->ondisk){
-			if (entry->owner->modified){
-				entry->owner->modified = 0;
-				write_page(page,entry->page);
-			}
-				entry->owner->inmemory=0;
-				entry->owner->page = entry->page;
-		}else{
-			entry->owner->inmemory=0;
-			entry->owner->ondisk = 1;
-			entry->owner->modified = 0;
-			unsigned swap_page = new_swap_page();
-			entry->owner->page = swap_page;
-			write_page(page,swap_page);
-		}
-	}
-	assert(page < RAM_PAGES);
-
-	return page;
-}
-
-static unsigned second_chance_replace()
-{
-	int	page;
-
-	page = INT_MAX;
-
-	assert(page < RAM_PAGES);
-}
-
-static unsigned take_phys_page()
-{
-	unsigned		page;	/* Page to be replaced. */
-
-	page = (*replace)();
 
 	/*coremap_entry_t* entry = &coremap[page];
 	if(entry->owner != NULL){
@@ -203,6 +166,88 @@ static unsigned take_phys_page()
 			write_page(page,swap_page);
 		}
 	}*/
+	assert(page < RAM_PAGES);
+
+	return page;
+}
+
+static unsigned second_chance_replace()
+{
+	 static int	page;
+
+
+	coremap_entry_t* entry = &coremap[page];
+	short first = 1;
+	while(entry->owner != NULL && entry->owner->referenced)
+	{
+	
+			entry->owner->referenced = 0;
+			first = 0;
+		
+		page = (page + 1) % RAM_PAGES;	
+		entry = &coremap[page];
+	}
+	assert(page < RAM_PAGES);
+
+	return page;
+}
+
+static unsigned second_chance_modified_replace()
+{
+	 static int	page;
+
+
+	coremap_entry_t* entry = &coremap[page];
+	int first = page;
+	int undone = 1;
+	int	check_modified = 0;
+	while(entry->owner != NULL && entry->owner->referenced && !check_modified)
+	{
+		page = (page + 1) % RAM_PAGES;	
+		entry = &coremap[page];
+		if(first == page)
+			check_modified = 1;
+	}
+	if(check_modified)
+	{
+		do {
+			entry = &coremap[page];
+			if (entry->owner->modified == 0){
+				undone = 0;
+			}else{				
+				page = (page + 1) %RAM_PAGES;
+			}
+		} while(undone && first != page);
+	}
+	assert(page < RAM_PAGES);
+
+	return page;
+}
+
+
+static unsigned take_phys_page()
+{
+	unsigned		page;	/* Page to be replaced. */
+
+	page = (*replace)();
+
+	coremap_entry_t* entry = &coremap[page];
+	if(entry->owner != NULL){
+		if (entry->owner->ondisk){
+			if (entry->owner->modified){
+				write_page(page,entry->page);
+			}
+				entry->owner->page = entry->page;
+		}else{
+			unsigned swap_page = new_swap_page();
+			entry->owner->page = swap_page;
+			write_page(page,swap_page);
+		}
+				entry->owner->ondisk = 1;
+				entry->owner->modified = 0;
+				entry->owner->inmemory=0;
+				entry->owner->referenced = 0;
+	}
 	return page;
 }
 
@@ -510,13 +555,15 @@ int run(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-#if 1
+#if 0
 	replace = fifo_page_replace;
+
 #else
-	replace = second_chance_replace;
+	replace = second_chance_modified_replace;
+	//replace = second_chance_replace;
 #endif
 
 	run(argc, argv);
 
-	printf("%llu page faults\n", num_pagefault);
+	printf("%llu page faults, %llu writes\n", num_pagefault, counter);
 }
