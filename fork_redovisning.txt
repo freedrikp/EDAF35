@@ -1,0 +1,10 @@
+do_fork: Denna metod anropas när systemanropet fork eller vfork kallas. Det första som sker är att kolla vilka flaggor klonen ska köras med och detta rapporteras till något som heter ptracer. Därefter görs ett kall till copy_process för att skapa en kopia av processen. Innan den nya process tråden väcks så kontrolleras den dessutom tilldelas korrekt pid och flaggor. Efter detta kallas wake_up_task vilket startar tråden och därefter meddelar man ptracer att forking är färdigt och en ny child process har startats.
+
+
+copy_process:
+
+
+wake_up_task:
+
+
+
