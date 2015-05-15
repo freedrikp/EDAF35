@@ -1,4 +1,4 @@
-﻿
+
 fork(): Skapar en exakt kopia av den körande processen och sätter denna till dess barn-process. Det är alltid barnet som kör före föräldern pga optimering. 
 
 vfork(): samma som fork() förutom att den är blockerande för föräldern. Användes förr för att optimera minneshanteringen då ett vanligt kall var fork() + exec() vilket skriver över minnet till barnet för att sedan återställa det igen via exec().
@@ -10,10 +10,10 @@ vfork() används dock inte längre då fork() använder sig av copy-on-write. Vi
 do_fork: Denna metod anropas när systemanropet fork eller vfork kallas. Det första som sker är att kolla vilka flaggor klonen ska köras med och detta rapporteras till något som heter ptracer. Därefter görs ett kall till copy_process för att skapa en kopia av processen. Innan den nya process tråden väcks så kontrolleras den dessutom tilldelas korrekt pid och flaggor. Efter detta kallas wake_up_task vilket startar tråden och därefter meddelar man ptracer att forking är färdigt och en ny child process har startats.
 
 
-copy_process: Kontrollerar flaggor och blockerar vissa fall. Anropar security_task_create som antagligen hanterar det på ett mer säker sätt om funktionerna har definierats.
+copy_process: Kontrollerar flaggor och blockerar vissa fall. Anropar security_task_create som antagligen hanterar det på ett mer säkert sätt om funktionerna har definierats. Anropar sedan dup_task_struct som duplicerar den struct som beskriver en process. Efter det så allokeras en return stack till den nya processen. Efter detta görs en massa checkar och värden initieras. Den nya processen schemaläggs för framtida körning och en massa kopierings-hjälpmetoder anropas. Den nya processen allokeras ett PID. Processen görs synlig för systemet och föräldern får information om barnet. Till slut de sista värdena på den nya processen och copy process börjar köra städningskod för att sedan returnera. Om copy process lyckades anropas wake_up_task.
 
 
-wake_up_task:
+wake_up_task: Metod i schedulerna som startar den nya processen.
 
 
 
