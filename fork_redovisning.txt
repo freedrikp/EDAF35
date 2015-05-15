@@ -1,3 +1,12 @@
+﻿
+fork(): Skapar en exakt kopia av den körande processen och sätter denna till dess barn-process. Det är alltid barnet som kör före föräldern pga optimering. 
+
+vfork(): samma som fork() förutom att den är blockerande för föräldern. Användes förr för att optimera minneshanteringen då ett vanligt kall var fork() + exec() vilket skriver över minnet till barnet för att sedan återställa det igen via exec().
+
+Det vfork() gör är att den delar minne mellan barn processes och föräldren och låter denna vänta till barnet har kört klart.
+
+vfork() används dock inte längre då fork() använder sig av copy-on-write. Vilket gör att man skriver enbart över minnet när detta ska modifieras via föräldern eller barn-processen.
+
 do_fork: Denna metod anropas när systemanropet fork eller vfork kallas. Det första som sker är att kolla vilka flaggor klonen ska köras med och detta rapporteras till något som heter ptracer. Därefter görs ett kall till copy_process för att skapa en kopia av processen. Innan den nya process tråden väcks så kontrolleras den dessutom tilldelas korrekt pid och flaggor. Efter detta kallas wake_up_task vilket startar tråden och därefter meddelar man ptracer att forking är färdigt och en ny child process har startats.
 
 
